@@ -3,25 +3,22 @@ import datetime
 import logging
 import win32evtlog
 
-# Configure logging
 logging.basicConfig(
     filename='security_event_log_analyzer.log',
-    level=logging.DEBUG,  # Change to DEBUG for more detailed logs
+    level=logging.DEBUG,  
     format='%(asctime)s %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Event ID to severity mapping (Updated)
 event_severity = {
-    4670: 4,  # Permissions on an object were changed
-    1102: 10,  # Audit log cleared
-    5156: 5,  # Windows Filtering Platform has allowed a connection
-    5158: 5,  # Windows Filtering Platform has blocked a connection
-    4720: 3,  # A user account was created
-    4726: 3,  # A user account was deleted
+    4670: 4,  
+    1102: 10,  
+    5156: 5,  
+    5158: 5,  
+    4720: 3,  
+    4726: 3,  
 }
 
-# Event descriptions for Event IDs (Updated)
 event_descriptions = {
     4670: "Permissions on an object were changed",
     1102: "Audit log cleared",
@@ -31,7 +28,6 @@ event_descriptions = {
     4726: "A user account was deleted",
 }
 
-# Thresholds for risk levels (Updated to a higher range)
 risk_thresholds = {
     'zero': 0,
     'low': 50,
@@ -55,7 +51,7 @@ def analyze_security_logs():
         logging.info("Opening Security event log...")
         hand = win32evtlog.OpenEventLog(server, log_type)
         
-        event_found = False  # Flag to track if any events were found
+        event_found = False  
         
         while True:
             events = win32evtlog.ReadEventLog(hand, flags, 0)
@@ -69,20 +65,20 @@ def analyze_security_logs():
                     score = event_severity[event_id]
                     time_generated = event.TimeGenerated
                     
-                    # Update daily scores
+               
                     date = time_generated.date()
                     if date not in daily_scores:
                         daily_scores[date] = 0
                         daily_event_counts[date] = {}
                     daily_scores[date] += score
                     
-                    # Count the event occurrences
+                    
                     if event_id not in daily_event_counts[date]:
                         daily_event_counts[date][event_id] = 0
                     daily_event_counts[date][event_id] += 1
                     
                     logging.debug(f"Event ID {event_id} detected at {time_generated}, score: {score}")
-                    event_found = True  # Set flag to True when at least one event is found
+                    event_found = True  
         
     except Exception as e:
         logging.error(f"Error: {str(e)}")
@@ -90,7 +86,6 @@ def analyze_security_logs():
         if 'hand' in locals() and hand:
             win32evtlog.CloseEventLog(hand)
     
-    # Generate reports
     if event_found:
         generate_daily_report(daily_scores, daily_event_counts)
     else:
@@ -102,16 +97,13 @@ def generate_daily_report(daily_scores, daily_event_counts):
     logging.info("Generating daily security report...")
     for date, score in daily_scores.items():
         risk_level = get_risk_level(score)
-        # Find the most frequent event for the day
         most_frequent_event = max(daily_event_counts[date], key=daily_event_counts[date].get)
         event_count = daily_event_counts[date][most_frequent_event]
         
-        # Fetch the event description
         event_description = event_descriptions.get(
             most_frequent_event, f"No description available for ID {most_frequent_event}"
         )
         
-        # Print the daily report with descriptions
         print(f"Date: {date}, Total Score: {score}, Risk Level: {risk_level}")
         print(f"   Most Frequent Event: ID {most_frequent_event} "
               f"({event_description}) (Occurred {event_count} times)")
